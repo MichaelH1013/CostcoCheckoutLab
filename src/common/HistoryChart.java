@@ -1,4 +1,4 @@
-package stadium;
+package common;
 
 import javax.swing.JPanel;
 import java.awt.BasicStroke;
@@ -6,8 +6,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Graphics;
 import java.awt.RenderingHints;
 import java.awt.geom.Path2D;
 import java.util.ArrayList;
@@ -20,6 +20,7 @@ import java.util.List;
  */
 public final class HistoryChart extends JPanel {
 
+    private static final Color LINE_COLOR = new Color(0xE8830C);
     private static final int MAX_POINTS = 400;
 
     private final List<double[]> points = new ArrayList<>();
@@ -127,9 +128,9 @@ public final class HistoryChart extends JPanel {
         double lastX = left + points.get(points.size() - 1)[0] / maxX * plotW;
         area.lineTo(lastX, top + plotH);
         area.closePath();
-        g.setColor(new Color(StadiumView.OUTSIDE.getRed(), StadiumView.OUTSIDE.getGreen(), StadiumView.OUTSIDE.getBlue(), 60));
+        g.setColor(new Color(LINE_COLOR.getRed(), LINE_COLOR.getGreen(), LINE_COLOR.getBlue(), 60));
         g.fill(area);
-        g.setColor(StadiumView.OUTSIDE);
+        g.setColor(LINE_COLOR);
         g.setStroke(new BasicStroke(1.6f));
         g.draw(line);
         g.dispose();

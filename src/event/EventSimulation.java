@@ -1,11 +1,12 @@
 package event;
 
+import common.SimClock;
 import parking.Car;
 import parking.Lot;
 import parking.ParkingSimulation;
-import stadium.SimClock;
 import stadium.StadiumSimulation;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -45,6 +46,7 @@ public final class EventSimulation {
     private final PriorityBlockingQueue<Group> walking = new PriorityBlockingQueue<>();
     private final AtomicInteger fansWalking = new AtomicInteger();
     private final ScheduledThreadPoolExecutor bridgePool;
+    private final CountDownLatch finished = new CountDownLatch(1);
 
     private volatile State state = State.NEW;
 
@@ -132,10 +134,12 @@ public final class EventSimulation {
         parking.stop();
         stadium.stop();
         clock.pause();
+        finished.countDown();
     }
 
+    /** Waits until the event has finished or been stopped. The shared clock is already paused when this returns. */
     public boolean awaitFinished(long millis) throws InterruptedException {
-        return stadium.awaitFinished(millis);
+        return finished.await(millis, TimeUnit.MILLISECONDS);
     }
 
     public boolean isFinished() {
@@ -158,6 +162,7 @@ public final class EventSimulation {
         clock.pause();
         state = State.FINISHED;
         bridgePool.shutdown();
+        finished.countDown();
     }
 
     /** Hands fans on to the stadium as their walk from the lot ends. */

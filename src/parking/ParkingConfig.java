@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.ArrivalShape;
+import common.ArrivalShape;
 
 /**
  * Every setting of a parking simulation. Changing the size of the event means changing these
@@ -22,6 +22,8 @@ import stadium.ArrivalShape;
  * @param speed            simulated seconds per real second
  * @param seed             random seed
  * @param layout           how the lots are drawn around the venue. It only changes the picture.
+ * @param crowdLimit       most cars allowed to wait on the street behind a full entrance lane at each lot. A car
+ *                         that arrives when it is full drives on and is counted. 0 means no limit.
  */
 public record ParkingConfig(
         int lots,
@@ -39,7 +41,8 @@ public record ParkingConfig(
         double lotBias,
         double speed,
         long seed,
-        ParkingLayout layout) {
+        ParkingLayout layout,
+        int crowdLimit) {
 
     public static final double WAGE_PER_HOUR = 18.0;
     public static final double FEE_PER_CAR = 25.0;
@@ -63,6 +66,7 @@ public record ParkingConfig(
         check(lotBias >= 0 && lotBias <= 10, "Lot bias must be from 0 to 10.");
         check(speed >= 0.1 && speed <= 10_000, "Speed must be from 0.1 to 10,000.");
         check(layout != null, "Pick a lot layout.");
+        check(crowdLimit >= 0 && crowdLimit <= 1_000_000, "Crowd limit must be from 0 to 1,000,000.");
     }
 
     private static void check(boolean ok, String message) {
@@ -101,7 +105,7 @@ public record ParkingConfig(
                 .arrivalMinutes(arrivalMinutes).payingSeconds(payingSeconds)
                 .spacesPerLot(spacesPerLot).queueCapacity(queueCapacity).strategy(strategy).shape(shape)
                 .producerThreads(producerThreads).driveSeconds(driveSeconds).walkSeconds(walkSeconds)
-                .lotBias(lotBias).speed(speed).seed(seed).layout(layout);
+                .lotBias(lotBias).speed(speed).seed(seed).layout(layout).crowdLimit(crowdLimit);
     }
 
     /** Starts from the football-game numbers, so a caller only sets what differs. */
@@ -122,6 +126,7 @@ public record ParkingConfig(
         private double speed = 120;
         private long seed = 311;
         private ParkingLayout layout = ParkingLayout.SURROUNDING;
+        private int crowdLimit = 0;
 
         public Builder lots(int value) {
             lots = value;
@@ -203,10 +208,15 @@ public record ParkingConfig(
             return this;
         }
 
+        public Builder crowdLimit(int value) {
+            crowdLimit = value;
+            return this;
+        }
+
         public ParkingConfig build() {
             return new ParkingConfig(lots, attendantsPerLot, cars, arrivalMinutes, payingSeconds, spacesPerLot,
                     queueCapacity, strategy, shape, producerThreads, driveSeconds, walkSeconds, lotBias, speed, seed,
-                    layout);
+                    layout, crowdLimit);
         }
     }
 }

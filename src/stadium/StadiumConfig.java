@@ -1,5 +1,7 @@
 package stadium;
 
+import common.ArrivalShape;
+
 /**
  * Every setting of a stadium simulation. Changing the size of the event means changing these
  * numbers only, no code.
@@ -17,6 +19,8 @@ package stadium;
  * @param gateBias         0 means every gate is equally popular, 1 means the first gate draws twice as many fans as the last
  * @param speed            simulated seconds per real second
  * @param seed             random seed
+ * @param crowdLimit       most fans allowed to wait outside a full lane at each gate. A fan who arrives when
+ *                         it is full gives up and is counted. 0 means no limit.
  */
 public record StadiumConfig(
         int gates,
@@ -31,7 +35,8 @@ public record StadiumConfig(
         double walkSeconds,
         double gateBias,
         double speed,
-        long seed) {
+        long seed,
+        int crowdLimit) {
 
     public static final double WAGE_PER_HOUR = 18.0;
     public static final int MAX_SCANNER_THREADS = 2000;
@@ -51,6 +56,7 @@ public record StadiumConfig(
         check(walkSeconds >= 0 && walkSeconds <= 3600, "Walk time must be from 0 to 3600 seconds.");
         check(gateBias >= 0 && gateBias <= 10, "Gate bias must be from 0 to 10.");
         check(speed >= 0.1 && speed <= 10_000, "Speed must be from 0.1 to 10,000.");
+        check(crowdLimit >= 0 && crowdLimit <= 1_000_000, "Crowd limit must be from 0 to 1,000,000.");
     }
 
     private static void check(boolean ok, String message) {
@@ -77,7 +83,7 @@ public record StadiumConfig(
                 .arrivalMinutes(arrivalMinutes).serviceSeconds(serviceSeconds)
                 .queueCapacity(queueCapacity).strategy(strategy).shape(shape)
                 .producerThreads(producerThreads).walkSeconds(walkSeconds)
-                .gateBias(gateBias).speed(speed).seed(seed);
+                .gateBias(gateBias).speed(speed).seed(seed).crowdLimit(crowdLimit);
     }
 
     /** Starts from the football-game numbers, so a caller only sets what differs. */
@@ -95,6 +101,7 @@ public record StadiumConfig(
         private double gateBias = 1.0;
         private double speed = 120;
         private long seed = 311;
+        private int crowdLimit = 0;
 
         public Builder gates(int value) {
             gates = value;
@@ -161,9 +168,15 @@ public record StadiumConfig(
             return this;
         }
 
+        public Builder crowdLimit(int value) {
+            crowdLimit = value;
+            return this;
+        }
+
         public StadiumConfig build() {
             return new StadiumConfig(gates, scannersPerGate, fans, arrivalMinutes, serviceSeconds,
-                    queueCapacity, strategy, shape, producerThreads, walkSeconds, gateBias, speed, seed);
+                    queueCapacity, strategy, shape, producerThreads, walkSeconds, gateBias, speed, seed,
+                    crowdLimit);
         }
     }
 }

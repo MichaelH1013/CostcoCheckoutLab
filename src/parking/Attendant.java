@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.SimClock;
+import common.SimClock;
 
 /**
  * An attendant at a lot entrance. The consumer, like Cashier: it takes the next car from the

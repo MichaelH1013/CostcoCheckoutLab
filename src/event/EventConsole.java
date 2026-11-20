@@ -63,6 +63,7 @@ public class EventConsole {
         System.out.println("-------");
         System.out.println("Cars parked: " + ps.parked() + " of " + p.cars());
         System.out.println("Cars turned away (lot full): " + ps.turnedAway());
+        System.out.println("Cars that drove on (street limit full): " + ps.gaveUp());
         System.out.printf("Average wait at the lot entrance: %.1f minutes%n", ps.averageWaitMinutes());
         System.out.printf("Longest wait: %.1f minutes%n", ps.longestWaitMinutes());
         System.out.printf("Last car handled at: %.1f minutes%n", parkingMinutes);
@@ -74,6 +75,7 @@ public class EventConsole {
         System.out.printf("Longest wait: %.1f minutes%n", ss.longestWaitMinutes());
         System.out.println("Longest line (lane plus fans waiting outside it): " + ss.peakLine());
         System.out.println("Fans who found the lane full: " + ss.foundFull());
+        System.out.println("Fans who gave up (crowd limit full): " + ss.gaveUp());
         System.out.printf("Last fan inside at: %.1f minutes%n", eventMinutes);
         System.out.println();
         System.out.println("Whole event");
@@ -121,6 +123,8 @@ public class EventConsole {
                     case "gatestrategy" -> stadium.strategy(QueueStrategy.valueOf(value.toUpperCase(Locale.ROOT)));
                     case "fanspercar" -> fansPerCar = Integer.parseInt(value);
                     case "speed" -> parking.speed(Double.parseDouble(value));
+                    case "streetlimit" -> parking.crowdLimit(Integer.parseInt(value));
+                    case "gatecrowd" -> stadium.crowdLimit(Integer.parseInt(value));
                     default -> throw new IllegalArgumentException("Unknown setting: " + key);
                 }
             } catch (NumberFormatException e) {
@@ -151,7 +155,7 @@ public class EventConsole {
         System.out.println("          lotstrategy (assigned_lot | shortest_line | most_free_spaces),");
         System.out.println("          gates, scanners (per gate), scan (seconds),");
         System.out.println("          gatestrategy (assigned_gate | shortest_line | shared_queue),");
-        System.out.println("          fanspercar, speed");
+        System.out.println("          fanspercar, speed, streetlimit and gatecrowd (0 = no limit)");
         System.out.println("Example:  java -cp out event.EventConsole football lots=8 gates=12 fanspercar=4");
     }
 }

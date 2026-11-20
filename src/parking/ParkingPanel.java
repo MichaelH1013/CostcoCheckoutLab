@@ -1,7 +1,8 @@
 package parking;
 
-import stadium.ArrivalShape;
-import stadium.HistoryChart;
+import common.ArrivalShape;
+import common.Form;
+import common.HistoryChart;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -14,8 +15,6 @@ import javax.swing.JSlider;
 import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
-import javax.swing.Scrollable;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.event.ChangeListener;
@@ -26,10 +25,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Rectangle;
+
+import static common.Form.*;
 
 /**
  * The whole parking window content: parameter controls on the left, the lots around the stadium
@@ -49,6 +48,7 @@ public final class ParkingPanel extends JPanel {
     private final JSpinner attendantsSpinner = intSpinner(2, 1, 50, 1);
     private final JSpinner spacesSpinner = intSpinner(300, 1, 100_000, 50);
     private final JSpinner queueSpinner = intSpinner(25, 1, 10_000, 5);
+    private final JSpinner crowdSpinner = intSpinner(0, 0, 1_000_000, 10);
     private final JSpinner payingSpinner = decimalSpinner(15, 0.5, 600, 0.5);
     private final JSpinner carsSpinner = intSpinner(1700, 1, 1_000_000, 100);
     private final JSpinner minutesSpinner = decimalSpinner(90, 1, 1000, 5);
@@ -80,6 +80,7 @@ public final class ParkingPanel extends JPanel {
     private final JLabel longestValue = valueLabel();
     private final JLabel peakValue = valueLabel();
     private final JLabel fullValue = valueLabel();
+    private final JLabel gaveUpValue = valueLabel();
     private final JLabel feesValue = valueLabel();
     private final JLabel lostValue = valueLabel();
     private final JLabel costValue = valueLabel();
@@ -100,7 +101,7 @@ public final class ParkingPanel extends JPanel {
             presetBox.addItem(preset);
         }
         for (JSpinner spinner : new JSpinner[] {lotsSpinner, attendantsSpinner, spacesSpinner, queueSpinner,
-                payingSpinner, carsSpinner, minutesSpinner, driveSpinner, walkSpinner, biasSpinner, producersSpinner}) {
+                crowdSpinner, payingSpinner, carsSpinner, minutesSpinner, driveSpinner, walkSpinner, biasSpinner, producersSpinner}) {
             spinner.addChangeListener(parameterListener);
         }
         strategyBox.addActionListener(e -> onParameterChanged());
@@ -131,39 +132,6 @@ public final class ParkingPanel extends JPanel {
 
     // ------------------------------------------------------------------ building the window
 
-    /** A panel that is as wide as the scroll pane's view, so the controls never run off the right edge. */
-    private static final class ControlsPanel extends JPanel implements Scrollable {
-
-        ControlsPanel() {
-            super(new GridBagLayout());
-        }
-
-        @Override
-        public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
-        }
-
-        @Override
-        public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction) {
-            return 16;
-        }
-
-        @Override
-        public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) {
-            return 80;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportWidth() {
-            return true;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportHeight() {
-            return false;
-        }
-    }
-
     private JPanel buildControls() {
         JPanel panel = new ControlsPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -186,6 +154,9 @@ public final class ParkingPanel extends JPanel {
                 "Attendant threads at each lot entrance. Each one handles one car at a time.");
         y = row(panel, y, "Lane capacity", queueSpinner,
                 "Cars that fit in one entrance lane. Extra cars wait on the street.");
+        y = row(panel, y, "Street limit (0 = none)", crowdSpinner,
+                "Most cars allowed to wait on the street behind a full lane at each lot. A car that arrives "
+                        + "when it is full drives on and is counted. 0 means no limit.");
         y = row(panel, y, "Pay time (sec)", payingSpinner,
                 "Average seconds to take payment or check a pass. Each car takes 0.5x to 1.5x of this.");
 
@@ -231,62 +202,6 @@ public final class ParkingPanel extends JPanel {
         return panel;
     }
 
-    private int section(JPanel panel, int y, String title) {
-        JLabel label = new JLabel(title);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setBorder(BorderFactory.createEmptyBorder(y == 0 ? 0 : 12, 0, 4, 0));
-        panel.add(label, fullWidth(y));
-        return y + 1;
-    }
-
-    private int row(JPanel panel, int y, String label, JComponent field, String tip) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.anchor = GridBagConstraints.WEST;
-        c.insets = new Insets(2, 0, 2, 8);
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        panel.add(text, c);
-        c = new GridBagConstraints();
-        c.gridx = 1;
-        c.gridy = y;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(2, 0, 2, 0);
-        field.setToolTipText(tip);
-        if (field instanceof JSpinner) {
-            field.setPreferredSize(new Dimension(90, 24));
-        }
-        panel.add(field, c);
-        return y + 1;
-    }
-
-    /** The label on its own line with the field under it, for fields with long text. */
-    private int wideRow(JPanel panel, int y, String label, JComponent field, String tip) {
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        GridBagConstraints c = fullWidth(y);
-        c.insets = new Insets(2, 0, 0, 0);
-        panel.add(text, c);
-        c = fullWidth(y + 1);
-        c.insets = new Insets(1, 0, 4, 0);
-        field.setToolTipText(tip);
-        panel.add(field, c);
-        return y + 2;
-    }
-
-    private GridBagConstraints fullWidth(int y) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.gridwidth = 2;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.anchor = GridBagConstraints.NORTHWEST;
-        return c;
-    }
-
     private JPanel buildStats() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -308,6 +223,7 @@ public final class ParkingPanel extends JPanel {
         addStat(numbers, "Longest wait", longestValue);
         addStat(numbers, "Longest line", peakValue);
         addStat(numbers, "Found the lane full", fullValue);
+        addStat(numbers, "Drove on (street full)", gaveUpValue);
         addStat(numbers, "Parking fees so far", feesValue);
         addStat(numbers, "Fees lost (turned away)", lostValue);
         addStat(numbers, "Attendant cost so far", costValue);
@@ -358,20 +274,6 @@ public final class ParkingPanel extends JPanel {
         panel.add(value);
     }
 
-    private static JLabel valueLabel() {
-        JLabel label = new JLabel("-", SwingConstants.RIGHT);
-        label.setFont(new Font(Font.MONOSPACED, Font.BOLD, 12));
-        return label;
-    }
-
-    private static JSpinner intSpinner(int value, int min, int max, int step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
-    private static JSpinner decimalSpinner(double value, double min, double max, double step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
     // ------------------------------------------------------------------ controls to config and back
 
     private ParkingConfig readConfig() {
@@ -383,6 +285,7 @@ public final class ParkingPanel extends JPanel {
                 .payingSeconds(doubleOf(payingSpinner))
                 .spacesPerLot(intOf(spacesSpinner))
                 .queueCapacity(intOf(queueSpinner))
+                .crowdLimit(intOf(crowdSpinner))
                 .strategy((LotStrategy) strategyBox.getSelectedItem())
                 .shape((ArrivalShape) shapeBox.getSelectedItem())
                 .producerThreads(intOf(producersSpinner))
@@ -409,6 +312,7 @@ public final class ParkingPanel extends JPanel {
         attendantsSpinner.setValue(c.attendantsPerLot());
         spacesSpinner.setValue(c.spacesPerLot());
         queueSpinner.setValue(c.queueCapacity());
+        crowdSpinner.setValue(c.crowdLimit());
         payingSpinner.setValue(c.payingSeconds());
         carsSpinner.setValue(c.cars());
         minutesSpinner.setValue(c.arrivalMinutes());
@@ -419,7 +323,7 @@ public final class ParkingPanel extends JPanel {
         strategyBox.setSelectedItem(c.strategy());
         shapeBox.setSelectedItem(c.shape());
         layoutBox.setSelectedItem(c.layout());
-        speedSlider.setValue(sliderFromSpeed(c.speed()));
+        speedSlider.setValue(sliderFor(c.speed()));
         updateSpeedLabel(speedFromSlider());
         loading = false;
         rebuildPreview();
@@ -427,16 +331,11 @@ public final class ParkingPanel extends JPanel {
 
     /** The slider is logarithmic: 10 to about 5,000 simulated seconds per real second. */
     private double speedFromSlider() {
-        return Math.round(10 * Math.pow(10, speedSlider.getValue() / 100.0 * 2.7));
-    }
-
-    private static int sliderFromSpeed(double speed) {
-        double position = Math.log10(Math.max(10, speed) / 10.0) / 2.7 * 100;
-        return (int) Math.max(0, Math.min(100, Math.round(position)));
+        return Form.speedFor(speedSlider.getValue());
     }
 
     private void updateSpeedLabel(double speed) {
-        speedLabel.setText(String.format("%,.0fx: 1 real second = %.1f simulated minutes", speed, speed / 60.0));
+        speedLabel.setText(Form.speedText(speed));
     }
 
     // ------------------------------------------------------------------ reacting to the user
@@ -549,7 +448,7 @@ public final class ParkingPanel extends JPanel {
         shownState = state;
         boolean editable = state == ParkingSimulation.State.NEW;
         for (JComponent c : new JComponent[] {presetBox, strategyBox, shapeBox, layoutBox, lotsSpinner, attendantsSpinner,
-                spacesSpinner, queueSpinner, payingSpinner, carsSpinner, minutesSpinner, driveSpinner,
+                spacesSpinner, queueSpinner, crowdSpinner, payingSpinner, carsSpinner, minutesSpinner, driveSpinner,
                 walkSpinner, biasSpinner, producersSpinner}) {
             c.setEnabled(editable);
         }
@@ -598,6 +497,7 @@ public final class ParkingPanel extends JPanel {
         longestValue.setText(String.format("%.1f min", s.longestWaitMinutes()));
         peakValue.setText(String.format("%,d", s.peakLine()));
         fullValue.setText(String.format("%,d", s.foundFull()));
+        gaveUpValue.setText(String.format("%,d", s.gaveUp()));
         feesValue.setText(String.format("$%,.0f", s.parked() * ParkingConfig.FEE_PER_CAR));
         lostValue.setText(String.format("$%,.0f", s.turnedAway() * ParkingConfig.FEE_PER_CAR));
         costValue.setText(String.format("$%,.2f", c.totalAttendants() * ParkingConfig.WAGE_PER_HOUR * minutes / 60));

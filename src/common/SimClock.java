@@ -1,4 +1,4 @@
-package stadium;
+package common;
 
 /**
  * The simulation clock. Time is counted in simulated seconds, and speed is how many simulated
@@ -52,8 +52,11 @@ public final class SimClock {
     }
 
     /**
-     * Sleeps until the given number of simulated seconds have passed. It sleeps in short slices
-     * so a pause or a speed change takes effect straight away.
+     * Sleeps until the given number of simulated seconds have passed. A running clock sleeps in
+     * slices of at most 100 ms, so a speed change takes effect within a tenth of a second. A
+     * paused clock is checked every 20 ms. The slices are long on purpose: on a computer whose
+     * operating system timer is coarse (about 15 ms on Windows) every sleep is rounded up to the
+     * next tick, so many short sleeps would make a wait several times too long.
      */
     public void sleepSim(double simSeconds) throws InterruptedException {
         double target = now() + simSeconds;
@@ -65,7 +68,7 @@ public final class SimClock {
             Segment s = segment;
             long ms = 20;
             if (s.running()) {
-                ms = Math.max(1, Math.min(20, (long) Math.ceil(remaining / s.speed() * 1000)));
+                ms = Math.max(1, Math.min(100, (long) Math.ceil(remaining / s.speed() * 1000)));
             }
             Thread.sleep(ms);
         }

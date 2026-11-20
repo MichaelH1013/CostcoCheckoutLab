@@ -25,12 +25,14 @@ public record StadiumSnapshot(
         double averageWaitMinutes,
         double longestWaitMinutes,
         long foundFull,
+        long gaveUp,
         int peakLine,
         List<LineSnapshot> lines,
         List<GateSnapshot> gates) {
 
     /** A line: one per gate, or a single shared one. */
-    public record LineSnapshot(String name, int lane, int outside, int walking, int peak, long foundFull) {
+    public record LineSnapshot(String name, int lane, int outside, int walking, int peak, long foundFull,
+                               long gaveUp) {
     }
 
     public record GateSnapshot(int id, String name, int scanners, int busyScanners, long admitted,

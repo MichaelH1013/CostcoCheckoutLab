@@ -1,0 +1,24 @@
+name: Tests
+
+# Builds the project and runs every test each time code is pushed or a pull request is opened.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compile the program and the tests
+        run: javac -Xlint:all -d out src/*/*.java test/*/*.java
+
+      - name: Run the tests
+        run: java -cp out runner.RunAllTests

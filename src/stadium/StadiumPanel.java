@@ -1,5 +1,9 @@
 package stadium;
 
+import common.ArrivalShape;
+import common.Form;
+import common.HistoryChart;
+
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -11,8 +15,6 @@ import javax.swing.JSlider;
 import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
-import javax.swing.Scrollable;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.event.ChangeListener;
@@ -23,10 +25,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Rectangle;
+
+import static common.Form.*;
 
 /**
  * The whole window content: parameter controls on the left, the stadium in the middle, live
@@ -48,6 +50,7 @@ public final class StadiumPanel extends JPanel {
     private final JSpinner minutesSpinner = decimalSpinner(60, 1, 1000, 5);
     private final JSpinner serviceSpinner = decimalSpinner(7, 0.5, 600, 0.5);
     private final JSpinner queueSpinner = intSpinner(40, 1, 10_000, 5);
+    private final JSpinner crowdSpinner = intSpinner(0, 0, 1_000_000, 10);
     private final JSpinner producersSpinner = intSpinner(2, 1, 32, 1);
     private final JSpinner walkSpinner = decimalSpinner(45, 0, 3600, 5);
     private final JSpinner biasSpinner = decimalSpinner(1, 0, 10, 0.5);
@@ -72,6 +75,7 @@ public final class StadiumPanel extends JPanel {
     private final JLabel longestValue = valueLabel();
     private final JLabel peakValue = valueLabel();
     private final JLabel fullValue = valueLabel();
+    private final JLabel gaveUpValue = valueLabel();
     private final JLabel rateValue = valueLabel();
     private final JLabel costValue = valueLabel();
     private final GateTableModel tableModel = new GateTableModel();
@@ -91,7 +95,7 @@ public final class StadiumPanel extends JPanel {
             presetBox.addItem(preset);
         }
         for (JSpinner spinner : new JSpinner[] {gatesSpinner, scannersSpinner, fansSpinner, minutesSpinner,
-                serviceSpinner, queueSpinner, producersSpinner, walkSpinner, biasSpinner}) {
+                serviceSpinner, queueSpinner, crowdSpinner, producersSpinner, walkSpinner, biasSpinner}) {
             spinner.addChangeListener(parameterListener);
         }
         strategyBox.addActionListener(e -> onParameterChanged());
@@ -121,39 +125,6 @@ public final class StadiumPanel extends JPanel {
 
     // ------------------------------------------------------------------ building the window
 
-    /** A panel that is as wide as the scroll pane's view, so the controls never run off the right edge. */
-    private static final class ControlsPanel extends JPanel implements Scrollable {
-
-        ControlsPanel() {
-            super(new GridBagLayout());
-        }
-
-        @Override
-        public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
-        }
-
-        @Override
-        public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction) {
-            return 16;
-        }
-
-        @Override
-        public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) {
-            return 80;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportWidth() {
-            return true;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportHeight() {
-            return false;
-        }
-    }
-
     private JPanel buildControls() {
         JPanel panel = new ControlsPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -172,6 +143,9 @@ public final class StadiumPanel extends JPanel {
                 "Scanner threads at each gate. Each one lets in one fan at a time.");
         y = row(panel, y, "Lane capacity", queueSpinner,
                 "Fans that fit in one lane. Extra fans wait outside it. A shared line holds this times the gates.");
+        y = row(panel, y, "Crowd limit (0 = none)", crowdSpinner,
+                "Most fans allowed to wait outside a full lane at each gate. A fan who arrives when it is full "
+                        + "gives up and is counted. 0 means no limit.");
         y = row(panel, y, "Scan time (sec)", serviceSpinner,
                 "Average seconds to scan a ticket and check a bag. Each fan takes 0.5x to 1.5x of this.");
 
@@ -214,62 +188,6 @@ public final class StadiumPanel extends JPanel {
         return panel;
     }
 
-    private int section(JPanel panel, int y, String title) {
-        JLabel label = new JLabel(title);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setBorder(BorderFactory.createEmptyBorder(y == 0 ? 0 : 12, 0, 4, 0));
-        panel.add(label, fullWidth(y));
-        return y + 1;
-    }
-
-    private int row(JPanel panel, int y, String label, JComponent field, String tip) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.anchor = GridBagConstraints.WEST;
-        c.insets = new Insets(2, 0, 2, 8);
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        panel.add(text, c);
-        c = new GridBagConstraints();
-        c.gridx = 1;
-        c.gridy = y;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(2, 0, 2, 0);
-        field.setToolTipText(tip);
-        if (field instanceof JSpinner) {
-            field.setPreferredSize(new Dimension(90, 24));
-        }
-        panel.add(field, c);
-        return y + 1;
-    }
-
-    /** The label on its own line with the field under it, for fields with long text. */
-    private int wideRow(JPanel panel, int y, String label, JComponent field, String tip) {
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        GridBagConstraints c = fullWidth(y);
-        c.insets = new Insets(2, 0, 0, 0);
-        panel.add(text, c);
-        c = fullWidth(y + 1);
-        c.insets = new Insets(1, 0, 4, 0);
-        field.setToolTipText(tip);
-        panel.add(field, c);
-        return y + 2;
-    }
-
-    private GridBagConstraints fullWidth(int y) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.gridwidth = 2;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.anchor = GridBagConstraints.NORTHWEST;
-        return c;
-    }
-
     private JPanel buildStats() {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -289,6 +207,7 @@ public final class StadiumPanel extends JPanel {
         addStat(numbers, "Longest wait", longestValue);
         addStat(numbers, "Longest line", peakValue);
         addStat(numbers, "Found the lane full", fullValue);
+        addStat(numbers, "Gave up (crowd full)", gaveUpValue);
         addStat(numbers, "Admitted per minute", rateValue);
         addStat(numbers, "Scanner cost so far", costValue);
 
@@ -338,20 +257,6 @@ public final class StadiumPanel extends JPanel {
         panel.add(value);
     }
 
-    private static JLabel valueLabel() {
-        JLabel label = new JLabel("-", SwingConstants.RIGHT);
-        label.setFont(new Font(Font.MONOSPACED, Font.BOLD, 12));
-        return label;
-    }
-
-    private static JSpinner intSpinner(int value, int min, int max, int step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
-    private static JSpinner decimalSpinner(double value, double min, double max, double step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
     // ------------------------------------------------------------------ controls to config and back
 
     private StadiumConfig readConfig() {
@@ -362,6 +267,7 @@ public final class StadiumPanel extends JPanel {
                 .arrivalMinutes(doubleOf(minutesSpinner))
                 .serviceSeconds(doubleOf(serviceSpinner))
                 .queueCapacity(intOf(queueSpinner))
+                .crowdLimit(intOf(crowdSpinner))
                 .strategy((QueueStrategy) strategyBox.getSelectedItem())
                 .shape((ArrivalShape) shapeBox.getSelectedItem())
                 .producerThreads(intOf(producersSpinner))
@@ -388,12 +294,13 @@ public final class StadiumPanel extends JPanel {
         minutesSpinner.setValue(c.arrivalMinutes());
         serviceSpinner.setValue(c.serviceSeconds());
         queueSpinner.setValue(c.queueCapacity());
+        crowdSpinner.setValue(c.crowdLimit());
         producersSpinner.setValue(c.producerThreads());
         walkSpinner.setValue(c.walkSeconds());
         biasSpinner.setValue(c.gateBias());
         strategyBox.setSelectedItem(c.strategy());
         shapeBox.setSelectedItem(c.shape());
-        speedSlider.setValue(sliderFromSpeed(c.speed()));
+        speedSlider.setValue(sliderFor(c.speed()));
         updateSpeedLabel(speedFromSlider());
         loading = false;
         rebuildPreview();
@@ -401,16 +308,11 @@ public final class StadiumPanel extends JPanel {
 
     /** The slider is logarithmic: 10 to about 5,000 simulated seconds per real second. */
     private double speedFromSlider() {
-        return Math.round(10 * Math.pow(10, speedSlider.getValue() / 100.0 * 2.7));
-    }
-
-    private static int sliderFromSpeed(double speed) {
-        double position = Math.log10(Math.max(10, speed) / 10.0) / 2.7 * 100;
-        return (int) Math.max(0, Math.min(100, Math.round(position)));
+        return Form.speedFor(speedSlider.getValue());
     }
 
     private void updateSpeedLabel(double speed) {
-        speedLabel.setText(String.format("%,.0fx: 1 real second = %.1f simulated minutes", speed, speed / 60.0));
+        speedLabel.setText(Form.speedText(speed));
     }
 
     // ------------------------------------------------------------------ reacting to the user
@@ -523,7 +425,7 @@ public final class StadiumPanel extends JPanel {
         shownState = state;
         boolean editable = state == StadiumSimulation.State.NEW;
         for (JComponent c : new JComponent[] {presetBox, strategyBox, shapeBox, gatesSpinner, scannersSpinner,
-                fansSpinner, minutesSpinner, serviceSpinner, queueSpinner, producersSpinner, walkSpinner, biasSpinner}) {
+                fansSpinner, minutesSpinner, serviceSpinner, queueSpinner, crowdSpinner, producersSpinner, walkSpinner, biasSpinner}) {
             c.setEnabled(editable);
         }
         startButton.setEnabled(state == StadiumSimulation.State.NEW && configError == null);
@@ -565,6 +467,7 @@ public final class StadiumPanel extends JPanel {
         longestValue.setText(String.format("%.1f min", s.longestWaitMinutes()));
         peakValue.setText(String.format("%,d", s.peakLine()));
         fullValue.setText(String.format("%,d", s.foundFull()));
+        gaveUpValue.setText(String.format("%,d", s.gaveUp()));
         double minutes = s.simMinutes();
         rateValue.setText(minutes > 0 ? String.format("%,.1f", s.admitted() / minutes) : "-");
         costValue.setText(String.format("$%,.2f", c.totalScanners() * StadiumConfig.WAGE_PER_HOUR * minutes / 60));

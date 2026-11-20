@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.SimClock;
+import common.SimClock;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +71,7 @@ public final class ParkingSimulation {
 
         for (int g = 0; g < config.lots(); g++) {
             String name = "Lot " + (char) ('A' + g % 26) + (g >= 26 ? String.valueOf(g / 26) : "");
-            CarLine line = new CarLine(name, config.queueCapacity());
+            CarLine line = new CarLine(name, config.queueCapacity(), config.crowdLimit());
             lines.add(line);
             lots.add(new Lot(g, name, config.spacesPerLot(), config.walkSecondsFor(g), line,
                     config.attendantsPerLot(), clock, recentCars, this::carParked, this::attendantFinished));
@@ -228,6 +228,7 @@ public final class ParkingSimulation {
         int paying = 0;
         int peak = 0;
         long foundFull = 0;
+        long gaveUp = 0;
         long parked = 0;
         long turnedAway = 0;
         long waitMs = 0;
@@ -241,7 +242,7 @@ public final class ParkingSimulation {
             ParkingSnapshot.LotSnapshot ls = new ParkingSnapshot.LotSnapshot(lot.getId(), lot.getName(),
                     lot.getSpaces(), lotParked, lot.getFreeSpaces(), lot.getAttendants().size(), busy,
                     lot.getTurnedAway(), line.laneSize(), line.outsideSize(), line.drivingSize(),
-                    line.getPeakLength(), line.getFoundFull(), lot.getAverageWaitMinutes(),
+                    line.getPeakLength(), line.getFoundFull(), line.getGaveUp(), lot.getAverageWaitMinutes(),
                     lot.getLongestWaitMinutes(), lot.getWalkSeconds(),
                     Double.isNaN(filledAt) ? Double.NaN : filledAt / 60.0);
             lotSnapshots.add(ls);
@@ -251,6 +252,7 @@ public final class ParkingSimulation {
             paying += busy;
             peak = Math.max(peak, ls.peak());
             foundFull += ls.foundFull();
+            gaveUp += ls.gaveUp();
             parked += lotParked;
             turnedAway += ls.turnedAway();
             waitMs += lot.getTotalWaitMs();
@@ -260,7 +262,7 @@ public final class ParkingSimulation {
         double average = processed == 0 ? 0 : waitMs / 1000.0 / processed / 60.0;
 
         return new ParkingSnapshot(state, now, config.cars(), spawned.get(), driving, waiting, outside, paying,
-                parked, turnedAway, average, longest, foundFull, peak, config.totalSpaces(), lotSnapshots);
+                parked, turnedAway, average, longest, foundFull, gaveUp, peak, config.totalSpaces(), lotSnapshots);
     }
 
     /**

@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.ArrivalShape;
+import common.ArrivalShape;
 
 /**
  * Ready-made events. Each one only fills in the parameters of ParkingConfig.

@@ -1,5 +1,7 @@
 package stadium;
 
+import common.SimClock;
+
 /**
  * A scanner at a gate. The consumer, like Cashier: it takes the next fan from the gate's line,
  * scans the ticket (and checks the bag), and lets the fan in.

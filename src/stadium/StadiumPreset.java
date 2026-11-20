@@ -1,5 +1,7 @@
 package stadium;
 
+import common.ArrivalShape;
+
 /**
  * Ready-made events. Each one only fills in the parameters of StadiumConfig.
  */

@@ -1,13 +1,13 @@
 package event;
 
+import common.ArrivalShape;
+import common.Form;
+import common.HistoryChart;
 import parking.LotStrategy;
 import parking.ParkingConfig;
 import parking.ParkingLayout;
-import parking.ParkingSimulation;
 import parking.ParkingSnapshot;
 import parking.ParkingView;
-import stadium.ArrivalShape;
-import stadium.HistoryChart;
 import stadium.QueueStrategy;
 import stadium.StadiumConfig;
 import stadium.StadiumSnapshot;
@@ -24,8 +24,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
-import javax.swing.Scrollable;
-import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.event.ChangeListener;
@@ -34,10 +32,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Rectangle;
+
+import static common.Form.*;
 
 /**
  * The whole event in one tab: the parking lots on the left of the picture, the stadium gates on
@@ -65,6 +63,7 @@ public final class EventPanel extends JPanel {
     private final JSpinner attendantsSpinner = intSpinner(2, 1, 50, 1);
     private final JSpinner paySpinner = decimalSpinner(15, 0.5, 600, 0.5);
     private final JSpinner lotLaneSpinner = intSpinner(25, 1, 10_000, 5);
+    private final JSpinner streetLimitSpinner = intSpinner(0, 0, 1_000_000, 10);
     private final JSpinner lotBiasSpinner = decimalSpinner(1, 0, 10, 0.5);
     private final JComboBox<LotStrategy> lotStrategyBox = new JComboBox<>(LotStrategy.values());
     private final JComboBox<ParkingLayout> layoutBox = new JComboBox<>(ParkingLayout.values());
@@ -73,6 +72,7 @@ public final class EventPanel extends JPanel {
     private final JSpinner scannersSpinner = intSpinner(2, 1, 100, 1);
     private final JSpinner scanSpinner = decimalSpinner(7, 0.5, 600, 0.5);
     private final JSpinner gateLaneSpinner = intSpinner(40, 1, 10_000, 5);
+    private final JSpinner gateCrowdSpinner = intSpinner(0, 0, 1_000_000, 10);
     private final JSpinner gateBiasSpinner = decimalSpinner(1, 0, 10, 0.5);
     private final JComboBox<QueueStrategy> gateStrategyBox = new JComboBox<>(QueueStrategy.values());
     // cars and fans
@@ -102,6 +102,7 @@ public final class EventPanel extends JPanel {
     private final JLabel walkingValue = valueLabel();
     private final JLabel gateLaneValue = valueLabel();
     private final JLabel gateOutsideValue = valueLabel();
+    private final JLabel gateGaveUpValue = valueLabel();
     private final JLabel scanningValue = valueLabel();
     private final JLabel gateWaitValue = valueLabel();
     private final JLabel gateLongestValue = valueLabel();
@@ -124,8 +125,8 @@ public final class EventPanel extends JPanel {
             presetBox.addItem(preset);
         }
         for (JSpinner spinner : new JSpinner[] {lotsSpinner, spacesSpinner, attendantsSpinner, paySpinner,
-                lotLaneSpinner, lotBiasSpinner, gatesSpinner, scannersSpinner, scanSpinner, gateLaneSpinner,
-                gateBiasSpinner, carsSpinner, fansPerCarSpinner, minutesSpinner, driveSpinner, lotWalkSpinner,
+                lotLaneSpinner, streetLimitSpinner, lotBiasSpinner, gatesSpinner, scannersSpinner, scanSpinner,
+                gateLaneSpinner, gateCrowdSpinner, gateBiasSpinner, carsSpinner, fansPerCarSpinner, minutesSpinner, driveSpinner, lotWalkSpinner,
                 gateWalkSpinner}) {
             spinner.addChangeListener(parameterListener);
         }
@@ -174,39 +175,6 @@ public final class EventPanel extends JPanel {
 
     // ------------------------------------------------------------------ building the window
 
-    /** A panel that is as wide as the scroll pane's view, so the controls never run off the right edge. */
-    private static final class ControlsPanel extends JPanel implements Scrollable {
-
-        ControlsPanel() {
-            super(new GridBagLayout());
-        }
-
-        @Override
-        public Dimension getPreferredScrollableViewportSize() {
-            return getPreferredSize();
-        }
-
-        @Override
-        public int getScrollableUnitIncrement(Rectangle visible, int orientation, int direction) {
-            return 16;
-        }
-
-        @Override
-        public int getScrollableBlockIncrement(Rectangle visible, int orientation, int direction) {
-            return 80;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportWidth() {
-            return true;
-        }
-
-        @Override
-        public boolean getScrollableTracksViewportHeight() {
-            return false;
-        }
-    }
-
     private JPanel buildControls() {
         JPanel panel = new ControlsPanel();
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -224,6 +192,8 @@ public final class EventPanel extends JPanel {
         y = row(panel, y, "Attendants per lot", attendantsSpinner, "Attendant threads at each lot entrance.");
         y = row(panel, y, "Pay time (sec)", paySpinner, "Average time to take payment or check a pass.");
         y = row(panel, y, "Lane capacity", lotLaneSpinner, "Cars that fit in one entrance lane. Extra cars wait on the street.");
+        y = row(panel, y, "Street limit (0 = none)", streetLimitSpinner,
+                "Most cars allowed to wait on the street behind a full lane. More cars than that drive on.");
         y = row(panel, y, "Lot bias", lotBiasSpinner, "1 = the nearest lot draws twice as many cars as the farthest.");
 
         y = section(panel, y, "2. Stadium gates");
@@ -233,6 +203,8 @@ public final class EventPanel extends JPanel {
         y = row(panel, y, "Scanners per gate", scannersSpinner, "Scanner threads at each gate.");
         y = row(panel, y, "Scan time (sec)", scanSpinner, "Average time to scan a fan.");
         y = row(panel, y, "Lane capacity", gateLaneSpinner, "Fans that fit in one gate lane. Extra fans wait outside it.");
+        y = row(panel, y, "Crowd limit (0 = none)", gateCrowdSpinner,
+                "Most fans allowed to wait outside a full gate lane. More fans than that give up.");
         y = row(panel, y, "Gate bias", gateBiasSpinner, "1 = gate 1 draws twice as many fans as the last gate.");
 
         y = section(panel, y, "Cars and fans");
@@ -275,62 +247,6 @@ public final class EventPanel extends JPanel {
         return panel;
     }
 
-    private int section(JPanel panel, int y, String title) {
-        JLabel label = new JLabel(title);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setBorder(BorderFactory.createEmptyBorder(y == 0 ? 0 : 12, 0, 4, 0));
-        panel.add(label, fullWidth(y));
-        return y + 1;
-    }
-
-    private int row(JPanel panel, int y, String label, JComponent field, String tip) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.anchor = GridBagConstraints.WEST;
-        c.insets = new Insets(2, 0, 2, 8);
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        panel.add(text, c);
-        c = new GridBagConstraints();
-        c.gridx = 1;
-        c.gridy = y;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(2, 0, 2, 0);
-        field.setToolTipText(tip);
-        if (field instanceof JSpinner) {
-            field.setPreferredSize(new Dimension(90, 24));
-        }
-        panel.add(field, c);
-        return y + 1;
-    }
-
-    /** The label on its own line with the field under it, for fields with long text. */
-    private int wideRow(JPanel panel, int y, String label, JComponent field, String tip) {
-        JLabel text = new JLabel(label);
-        text.setToolTipText(tip);
-        GridBagConstraints c = fullWidth(y);
-        c.insets = new Insets(2, 0, 0, 0);
-        panel.add(text, c);
-        c = fullWidth(y + 1);
-        c.insets = new Insets(1, 0, 4, 0);
-        field.setToolTipText(tip);
-        panel.add(field, c);
-        return y + 2;
-    }
-
-    private GridBagConstraints fullWidth(int y) {
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        c.gridy = y;
-        c.gridwidth = 2;
-        c.weightx = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.anchor = GridBagConstraints.NORTHWEST;
-        return c;
-    }
-
     private JPanel buildStats() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -349,9 +265,10 @@ public final class EventPanel extends JPanel {
         addSection(panel, "On the way",
                 new String[] {"Fans walking to the stadium"}, new JLabel[] {walkingValue});
         addSection(panel, "2. Stadium gates",
-                new String[] {"Fans in gate lanes", "Waiting outside lanes", "Being scanned", "Average wait",
-                        "Longest wait"},
-                new JLabel[] {gateLaneValue, gateOutsideValue, scanningValue, gateWaitValue, gateLongestValue});
+                new String[] {"Fans in gate lanes", "Waiting outside lanes", "Gave up (crowd full)", "Being scanned",
+                        "Average wait", "Longest wait"},
+                new JLabel[] {gateLaneValue, gateOutsideValue, gateGaveUpValue, scanningValue, gateWaitValue,
+                        gateLongestValue});
         addSection(panel, "Money",
                 new String[] {"Parking fees so far", "Fees lost (turned away)", "Staff cost so far"},
                 new JLabel[] {feesValue, lostValue, costValue});
@@ -382,20 +299,6 @@ public final class EventPanel extends JPanel {
         panel.add(grid);
     }
 
-    private static JLabel valueLabel() {
-        JLabel label = new JLabel("-", SwingConstants.RIGHT);
-        label.setFont(new Font(Font.MONOSPACED, Font.BOLD, 12));
-        return label;
-    }
-
-    private static JSpinner intSpinner(int value, int min, int max, int step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
-    private static JSpinner decimalSpinner(double value, double min, double max, double step) {
-        return new JSpinner(new SpinnerNumberModel(value, min, max, step));
-    }
-
     // ------------------------------------------------------------------ controls to config and back
 
     private EventConfig readConfig() {
@@ -407,6 +310,7 @@ public final class EventPanel extends JPanel {
                 .payingSeconds(doubleOf(paySpinner))
                 .spacesPerLot(intOf(spacesSpinner))
                 .queueCapacity(intOf(lotLaneSpinner))
+                .crowdLimit(intOf(streetLimitSpinner))
                 .strategy((LotStrategy) lotStrategyBox.getSelectedItem())
                 .shape((ArrivalShape) shapeBox.getSelectedItem())
                 .producerThreads(2)
@@ -422,6 +326,7 @@ public final class EventPanel extends JPanel {
                 .scannersPerGate(intOf(scannersSpinner))
                 .serviceSeconds(doubleOf(scanSpinner))
                 .queueCapacity(intOf(gateLaneSpinner))
+                .crowdLimit(intOf(gateCrowdSpinner))
                 .strategy((QueueStrategy) gateStrategyBox.getSelectedItem())
                 .producerThreads(2)
                 .walkSeconds(doubleOf(gateWalkSpinner))
@@ -449,6 +354,7 @@ public final class EventPanel extends JPanel {
         attendantsSpinner.setValue(p.attendantsPerLot());
         paySpinner.setValue(p.payingSeconds());
         lotLaneSpinner.setValue(p.queueCapacity());
+        streetLimitSpinner.setValue(p.crowdLimit());
         lotBiasSpinner.setValue(p.lotBias());
         lotStrategyBox.setSelectedItem(p.strategy());
         layoutBox.setSelectedItem(p.layout());
@@ -456,6 +362,7 @@ public final class EventPanel extends JPanel {
         scannersSpinner.setValue(s.scannersPerGate());
         scanSpinner.setValue(s.serviceSeconds());
         gateLaneSpinner.setValue(s.queueCapacity());
+        gateCrowdSpinner.setValue(s.crowdLimit());
         gateBiasSpinner.setValue(s.gateBias());
         gateStrategyBox.setSelectedItem(s.strategy());
         carsSpinner.setValue(p.cars());
@@ -465,7 +372,7 @@ public final class EventPanel extends JPanel {
         driveSpinner.setValue(p.driveSeconds());
         lotWalkSpinner.setValue(p.walkSeconds());
         gateWalkSpinner.setValue(s.walkSeconds());
-        speedSlider.setValue(sliderFromSpeed(p.speed()));
+        speedSlider.setValue(sliderFor(p.speed()));
         updateSpeedLabel(speedFromSlider());
         loading = false;
         rebuildPreview();
@@ -473,16 +380,11 @@ public final class EventPanel extends JPanel {
 
     /** The slider is logarithmic: 10 to about 5,000 simulated seconds per real second. */
     private double speedFromSlider() {
-        return Math.round(10 * Math.pow(10, speedSlider.getValue() / 100.0 * 2.7));
-    }
-
-    private static int sliderFromSpeed(double speed) {
-        double position = Math.log10(Math.max(10, speed) / 10.0) / 2.7 * 100;
-        return (int) Math.max(0, Math.min(100, Math.round(position)));
+        return Form.speedFor(speedSlider.getValue());
     }
 
     private void updateSpeedLabel(double speed) {
-        speedLabel.setText(String.format("%,.0fx: 1 real second = %.1f simulated minutes", speed, speed / 60.0));
+        speedLabel.setText(Form.speedText(speed));
     }
 
     // ------------------------------------------------------------------ reacting to the user
@@ -598,8 +500,9 @@ public final class EventPanel extends JPanel {
         shownState = state;
         boolean editable = state == EventSimulation.State.NEW;
         for (JComponent c : new JComponent[] {presetBox, lotStrategyBox, layoutBox, gateStrategyBox, shapeBox,
-                lotsSpinner, spacesSpinner, attendantsSpinner, paySpinner, lotLaneSpinner, lotBiasSpinner,
-                gatesSpinner, scannersSpinner, scanSpinner, gateLaneSpinner, gateBiasSpinner, carsSpinner,
+                lotsSpinner, spacesSpinner, attendantsSpinner, paySpinner, lotLaneSpinner, streetLimitSpinner,
+                lotBiasSpinner, gatesSpinner, scannersSpinner, scanSpinner, gateLaneSpinner, gateCrowdSpinner,
+                gateBiasSpinner, carsSpinner,
                 fansPerCarSpinner, minutesSpinner, driveSpinner, lotWalkSpinner, gateWalkSpinner}) {
             c.setEnabled(editable);
         }
@@ -654,6 +557,7 @@ public final class EventPanel extends JPanel {
         walkingValue.setText(String.format("%,d", sim.getFansWalking()));
         gateLaneValue.setText(String.format("%,d", ss.waiting()));
         gateOutsideValue.setText(String.format("%,d", ss.outside()));
+        gateGaveUpValue.setText(String.format("%,d", ss.gaveUp()));
         scanningValue.setText(String.format("%,d", ss.scanning()));
         gateWaitValue.setText(String.format("%.1f min", ss.averageWaitMinutes()));
         gateLongestValue.setText(String.format("%.1f min", ss.longestWaitMinutes()));

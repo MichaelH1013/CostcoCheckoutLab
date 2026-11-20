@@ -6,7 +6,7 @@ package stadium;
  */
 public final class Fan {
 
-    public enum State { WALKING, WAITING, SCANNING, INSIDE }
+    public enum State { WALKING, WAITING, SCANNING, INSIDE, GAVE_UP }
 
     /** The stop value, like the -1 the Costco cashiers used. A scanner that takes it goes home. */
     public static final Fan STOP = new Fan(0, -1, 0, 0, 0, 0);
@@ -89,6 +89,11 @@ public final class Fan {
 
     void markWaiting() {
         state = State.WAITING;
+    }
+
+    /** The fan arrived when the lane and the crowd outside it were both full, and left. */
+    void markGaveUp() {
+        state = State.GAVE_UP;
     }
 
     void markScanning(int gateIndex, double now) {

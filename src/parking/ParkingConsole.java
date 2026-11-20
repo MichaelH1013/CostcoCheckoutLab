@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.ArrivalShape;
+import common.ArrivalShape;
 
 import java.util.Locale;
 
@@ -41,7 +41,7 @@ public class ParkingConsole {
         double openMinutes = simulation.getFinishedAt() / 60.0;
         double staffCost = config.totalAttendants() * ParkingConfig.WAGE_PER_HOUR * openMinutes / 60;
         double revenue = result.parked() * ParkingConfig.FEE_PER_CAR;
-        double lost = result.turnedAway() * ParkingConfig.FEE_PER_CAR;
+        double lost = (result.turnedAway() + result.gaveUp()) * ParkingConfig.FEE_PER_CAR;
         double walkSum = 0;
         for (ParkingSnapshot.LotSnapshot lot : result.lots()) {
             walkSum += lot.parked() * lot.walkSeconds();
@@ -57,9 +57,10 @@ public class ParkingConsole {
         System.out.printf("Longest wait: %.1f minutes%n", result.longestWaitMinutes());
         System.out.println("Longest line (lane plus cars waiting on the street): " + result.peakLine());
         System.out.println("Cars who found the lane full: " + result.foundFull());
+        System.out.println("Cars that drove on (street limit full): " + result.gaveUp());
         System.out.printf("Average walk from the lot to the stadium: %.1f minutes%n", averageWalk);
         System.out.printf("Entrances open until the last car was handled: %.1f minutes%n", openMinutes);
-        System.out.printf("Parking fees at $%.0f per car: $%,.2f (turned away: $%,.2f lost)%n",
+        System.out.printf("Parking fees at $%.0f per car: $%,.2f (turned away or drove on: $%,.2f lost)%n",
                 ParkingConfig.FEE_PER_CAR, revenue, lost);
         System.out.printf("Attendant cost at $%.0f per hour: $%,.2f%n", ParkingConfig.WAGE_PER_HOUR, staffCost);
         System.out.printf("Real time taken: %.1f seconds%n", realMs / 1000.0);
@@ -109,6 +110,7 @@ public class ParkingConsole {
                     case "bias" -> builder.lotBias(Double.parseDouble(value));
                     case "speed" -> builder.speed(Double.parseDouble(value));
                     case "seed" -> builder.seed(Long.parseLong(value));
+                    case "street" -> builder.crowdLimit(Integer.parseInt(value));
                     case "layout" -> builder.layout(ParkingLayout.valueOf(value.toUpperCase(Locale.ROOT)));
                     default -> throw new IllegalArgumentException("Unknown setting: " + key);
                 }
@@ -139,7 +141,8 @@ public class ParkingConsole {
         System.out.println("Settings: lots, attendants (per lot), cars, minutes (arrival window), pay (seconds),");
         System.out.println("          spaces (per lot), queue (lane capacity), strategy (assigned_lot | shortest_line | most_free_spaces),");
         System.out.println("          shape (uniform | surge | late_rush), producers, drive (seconds), walk (seconds), bias, speed, seed,");
-        System.out.println("          layout (surrounding | behind_venue, only changes the picture)");
+        System.out.println("          layout (surrounding | behind_venue, only changes the picture),");
+        System.out.println("          street (most cars allowed to wait behind a full lane, 0 = no limit)");
         System.out.println("Example:  java -cp out parking.ParkingConsole football lots=8 strategy=most_free_spaces");
     }
 }

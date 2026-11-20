@@ -1,5 +1,7 @@
 package stadium;
 
+import common.ArrivalShape;
+
 import java.util.Locale;
 
 /**
@@ -47,6 +49,7 @@ public class StadiumConsole {
         System.out.printf("Longest wait: %.1f minutes%n", result.longestWaitMinutes());
         System.out.println("Longest line (lane plus fans waiting outside it): " + result.peakLine());
         System.out.println("Fans who found the lane full: " + result.foundFull());
+        System.out.println("Fans who gave up (crowd limit full): " + result.gaveUp());
         System.out.printf("Gates open until the last fan was inside: %.1f minutes%n", openMinutes);
         System.out.printf("Scanner cost at $%.0f per hour: $%.2f%n", StadiumConfig.WAGE_PER_HOUR, staffCost);
         System.out.printf("Real time taken: %.1f seconds%n", realMs / 1000.0);
@@ -89,6 +92,7 @@ public class StadiumConsole {
                     case "bias" -> builder.gateBias(Double.parseDouble(value));
                     case "speed" -> builder.speed(Double.parseDouble(value));
                     case "seed" -> builder.seed(Long.parseLong(value));
+                    case "crowd" -> builder.crowdLimit(Integer.parseInt(value));
                     default -> throw new IllegalArgumentException("Unknown setting: " + key);
                 }
             } catch (NumberFormatException e) {
@@ -117,7 +121,8 @@ public class StadiumConsole {
         System.out.println("Presets:  demo (default), football, concert, stress");
         System.out.println("Settings: gates, scanners (per gate), fans, minutes (arrival window), service (seconds),");
         System.out.println("          queue (lane capacity), strategy (assigned_gate | shortest_line | shared_queue),");
-        System.out.println("          shape (uniform | surge | late_rush), producers, walk (seconds), bias, speed, seed");
+        System.out.println("          shape (uniform | surge | late_rush), producers, walk (seconds), bias, speed, seed,");
+        System.out.println("          crowd (most fans allowed to wait outside a full lane, 0 = no limit)");
         System.out.println("Example:  java -cp out stadium.StadiumConsole football gates=12 scanners=3 strategy=shortest_line");
     }
 }

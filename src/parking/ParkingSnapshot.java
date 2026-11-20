@@ -21,13 +21,14 @@ public record ParkingSnapshot(
         double averageWaitMinutes,
         double longestWaitMinutes,
         long foundFull,
+        long gaveUp,
         int peakLine,
         long totalSpaces,
         List<LotSnapshot> lots) {
 
     public record LotSnapshot(int id, String name, int spaces, int parked, int free, int attendants,
                               int busyAttendants, long turnedAway, int lane, int outside, int driving,
-                              int peak, long foundFull, double averageWaitMinutes, double longestWaitMinutes,
+                              int peak, long foundFull, long gaveUp, double averageWaitMinutes, double longestWaitMinutes,
                               double walkSeconds, double filledAtMinutes) {
     }
 

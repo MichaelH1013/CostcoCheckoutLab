@@ -1,5 +1,7 @@
 package stadium;
 
+import common.SimClock;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.SplittableRandom;
@@ -77,14 +79,15 @@ public final class StadiumSimulation {
         boolean shared = config.strategy() == QueueStrategy.SHARED_QUEUE;
         FanLine sharedLine = null;
         if (shared) {
-            sharedLine = new FanLine("Shared line", config.queueCapacity() * config.gates());
+            sharedLine = new FanLine("Shared line", config.queueCapacity() * config.gates(),
+                    config.crowdLimit() * config.gates());
             lines.add(sharedLine);
         }
         for (int g = 0; g < config.gates(); g++) {
             String name = "Gate " + (g + 1);
             FanLine line = sharedLine;
             if (!shared) {
-                line = new FanLine(name, config.queueCapacity());
+                line = new FanLine(name, config.queueCapacity(), config.crowdLimit());
                 lines.add(line);
             }
             gates.add(new Gate(g, name, line, config.scannersPerGate(), clock, recentAdmissions,
@@ -129,6 +132,11 @@ public final class StadiumSimulation {
 
     public State getState() {
         return state;
+    }
+
+    /** Called on a scanner thread for every fan who gets in. Used by the experiments to record exact times. */
+    public void setAdmissionListener(java.util.function.Consumer<Fan> listener) {
+        recentAdmissions.setListener(listener);
     }
 
     /** The fans who got in most recently, so the GUI can animate them walking to their seats. */
@@ -312,15 +320,18 @@ public final class StadiumSimulation {
         int outside = 0;
         int peak = 0;
         long foundFull = 0;
+        long gaveUp = 0;
         for (FanLine line : lines) {
             StadiumSnapshot.LineSnapshot ls = new StadiumSnapshot.LineSnapshot(line.getName(),
-                    line.laneSize(), line.outsideSize(), line.walkingSize(), line.getPeakLength(), line.getFoundFull());
+                    line.laneSize(), line.outsideSize(), line.walkingSize(), line.getPeakLength(), line.getFoundFull(),
+                    line.getGaveUp());
             lineSnapshots.add(ls);
             walking += ls.walking();
             waiting += ls.lane();
             outside += ls.outside();
             peak = Math.max(peak, ls.peak());
             foundFull += ls.foundFull();
+            gaveUp += ls.gaveUp();
         }
 
         List<StadiumSnapshot.GateSnapshot> gateSnapshots = new ArrayList<>();
@@ -344,7 +355,7 @@ public final class StadiumSimulation {
 
         int totalFans = externalFeed ? expectedFans.get() : config.fans();
         return new StadiumSnapshot(state, now, totalFans, config.fans(), spawned.get(), walking, waiting, outside,
-                scanning, admitted, average, longest, foundFull, peak, lineSnapshots, gateSnapshots);
+                scanning, admitted, average, longest, foundFull, gaveUp, peak, lineSnapshots, gateSnapshots);
     }
 
     /**

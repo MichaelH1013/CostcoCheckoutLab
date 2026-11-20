@@ -7,7 +7,7 @@ package parking;
  */
 public final class Car {
 
-    public enum State { DRIVING, WAITING, PAYING, PARKED, TURNED_AWAY }
+    public enum State { DRIVING, WAITING, PAYING, PARKED, TURNED_AWAY, GAVE_UP }
 
     /** The stop value, like the -1 the Costco cashiers used. An attendant who takes it goes home. */
     public static final Car STOP = new Car(0, -1, 0, 0, 0, 0);
@@ -97,6 +97,11 @@ public final class Car {
 
     void markWaiting() {
         state = State.WAITING;
+    }
+
+    /** The car arrived when the lane and the street behind it were both full, and drove on. */
+    void markGaveUp() {
+        state = State.GAVE_UP;
     }
 
     void markPaying(int lotIndex, double now) {

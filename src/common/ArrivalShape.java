@@ -1,4 +1,4 @@
-package stadium;
+package common;
 
 /**
  * How fans are spread over the arrival window. fractionArrived(u) is the share of all fans who

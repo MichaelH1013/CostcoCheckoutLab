@@ -1,6 +1,6 @@
 package parking;
 
-import stadium.SimClock;
+import common.SimClock;
 
 import java.util.ArrayList;
 import java.util.List;
