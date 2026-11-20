@@ -1,0 +1,14 @@
+out/
+.idea/
+*.iml
+
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+bin/
+
+.vscode/
+
+.DS_Store
