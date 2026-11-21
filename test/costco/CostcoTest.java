@@ -88,5 +88,20 @@ public class CostcoTest {
             Check.near(averageWait, longestWait, 0.001,
                     "average and longest wait for one customer");
         });
+
+        Check.test("cashier stops when queue is empty", () -> {
+            CheckoutQueue queue = new CheckoutQueue(2, 0);
+            Cashier cashier = new Cashier(1, queue);
+            Thread cashierThread = new Thread(cashier);
+
+            cashierThread.start();
+
+            queue.stopCashiers(1);
+
+            cashierThread.join(1000);
+
+            Check.that(!cashierThread.isAlive(), "cashier should terminate");
+            Check.equal(0, cashier.getCustomersServed(), "no customers served");
+        });
     }
 }
