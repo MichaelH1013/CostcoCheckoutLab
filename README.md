@@ -2,21 +2,14 @@
 
 CSC 311 Producer-Consumer lab. Customers (producers) shop and then join a checkout queue. Cashiers (consumers) take customers from the queue and serve them. The simulator measures wait times and staff cost so we can decide how many cashiers to schedule.
 
-## Team members and contributions
+## Team members
 
-| Team member | Contribution |
-|---|---|
-| [Teammate 1 name] | `CheckoutQueue` |
-| [Teammate 2 name] | `Customer` |
-| [Teammate 3 name] | `Cashier` |
-| All three | `CostcoSimulation`, experiments, analysis, README |
+Team members
 
-## Use of AI
+    Patrick Hickey
+    Michael Hickey
+    Phillip Dhanpaul
 
-AI assistance was used to improve this project, as the professor invited. The tool was Claude (made by Anthropic), used through Claude Code. This notice covers the extra credit work.
-
-- **Where it was used:** the extra credit. It wrote most of the code and text for the stadium, parking and whole event simulations and their windows (`src/stadium`, `src/parking`, `src/event`, `src/app`), the code they share (`src/common`), the tests and experiments (`test`, `src/experiments`) and the extra credit sections of this README. It also ran the tests and the experiments, and the numbers in those sections come from those runs. The Costco lab in `src/costco` was not changed during the extra credit work.
-- **How it was checked:** by the automatic tests, a comparison with queueing theory and repeated runs, described under "Checking that the results can be trusted". The repeated runs found a real mistake in the first set of experiments, which had been run at too high a speed. It was corrected, and the section "Repeated runs, and a mistake they found" explains what went wrong.
 
 ## Classes
 
