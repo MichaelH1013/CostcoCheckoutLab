@@ -64,5 +64,12 @@ public class CostcoTest {
             Check.equal(2, queue.next(), "second customer enters queue");
             Check.equal(1, queue.getCustomersWhoFoundItFull(), "full queue count");
         });
+
+        Check.test("new queue starts with zero wait statistics", () -> {
+            CheckoutQueue queue = new CheckoutQueue(3, 3);
+
+            Check.near(0.0, queue.getAverageWaitMinutes(), 0.001, "average wait");
+            Check.near(0.0, queue.getLongestWaitMinutes(), 0.001, "longest wait");
+        });
     }
 }
