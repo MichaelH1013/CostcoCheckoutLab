@@ -6,7 +6,7 @@ import event.EventTest;
 import experiments.ExperimentsTest;
 import parking.ParkingTest;
 import stadium.StadiumTest;
-
+import costco.CostcoTest;
 /**
  * Runs every test and sets the exit code, so it works in a terminal, in IntelliJ and in the
  * automatic build on GitHub. Run it from the project folder:
@@ -24,6 +24,7 @@ public class RunAllTests {
         StadiumTest.run();
         ParkingTest.run();
         EventTest.run();
+        CostcoTest.run();
         System.out.printf("%nTime taken: %.0f seconds%n", (System.nanoTime() - start) / 1e9);
         System.exit(Check.finish());
     }
