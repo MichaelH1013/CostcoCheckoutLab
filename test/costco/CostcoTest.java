@@ -71,5 +71,22 @@ public class CostcoTest {
             Check.near(0.0, queue.getAverageWaitMinutes(), 0.001, "average wait");
             Check.near(0.0, queue.getLongestWaitMinutes(), 0.001, "longest wait");
         });
+
+        Check.test("queue records customer wait time", () -> {
+            CheckoutQueue queue = new CheckoutQueue(2, 1);
+
+            queue.join(1);
+
+            Thread.sleep(150);
+
+            Check.equal(1, queue.next(), "customer leaves queue");
+
+            double averageWait = queue.getAverageWaitMinutes();
+            double longestWait = queue.getLongestWaitMinutes();
+
+            Check.that(averageWait > 0, "average wait should be positive");
+            Check.near(averageWait, longestWait, 0.001,
+                    "average and longest wait for one customer");
+        });
     }
 }
